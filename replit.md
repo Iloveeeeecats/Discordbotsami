@@ -1,6 +1,6 @@
-# [Project name]
+# Production Discord System Bot
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A portable prefix-command Discord bot with persistent PostgreSQL-backed moderation, security, community, and configuration systems.
 
 ## Run & Operate
 
@@ -43,3 +43,23 @@ _Populate as you build — sharp edges, "always run X before Y" rules._
 ## Pointers
 
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+
+## Bot package
+
+- `bot/` contains the portable Node.js Discord bot.
+- `bot/src/commands.js` is the command registry and implementation surface.
+- `bot/src/db.js` owns automatic PostgreSQL schema initialization and persistence.
+- `bot/src/security.js` handles filtering, anti-spam, counting, and audit-log protection.
+- Run `pnpm --filter @workspace/discord-system-bot check` for syntax checks.
+- Run the bot with `pnpm --filter @workspace/discord-system-bot start` after setting `DISCORD_TOKEN`, `BOT_OWNER_IDS`, and `DATABASE_URL`.
+
+## Architecture decisions
+
+- The bot uses PostgreSQL rather than memory or a local file because it must survive restarts and move between hosts.
+- Prefixes are loaded per guild before command parsing, so commands, aliases, help, and mention responses always reflect the current server prefix.
+- Unsupported server-profile endpoints are reported explicitly; global bot profile mutations are never used as a substitute.
+- Owner-only access is based only on `BOT_OWNER_IDS`; Discord Administrator is intentionally separate.
+
+## Product
+
+The bot provides prefix commands for moderation, security, jail, tickets, blacklist/whitelist, word filtering, anti-spam, leveling, counting, welcome messages, aliases, backups, and server configuration.

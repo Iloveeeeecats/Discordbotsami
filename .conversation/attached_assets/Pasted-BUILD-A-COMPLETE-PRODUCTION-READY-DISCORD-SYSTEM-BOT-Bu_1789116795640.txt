@@ -1,0 +1,1287 @@
+BUILD A COMPLETE PRODUCTION-READY DISCORD SYSTEM BOT
+
+Build me a complete, professional, modular Discord system bot using Node.js and discord.js.
+
+IMPORTANT:
+THIS IS A PREFIX COMMAND BOT.
+DO NOT MAKE THE MAIN COMMAND SYSTEM SLASH-COMMAND BASED.
+
+Default prefix:
+.
+
+The prefix must be configurable per server.
+
+If the prefix changes to !, commands become !ban, !cmds, etc.
+If it changes to ?, commands become ?ban, ?cmds, etc.
+
+All commands, aliases, help messages, embeds and automatic responses must use the server's current prefix dynamically.
+
+==================================================
+1. CORE BOT ARCHITECTURE
+==================================================
+
+Build this as a real production-quality Discord bot, not a basic example.
+
+Use a clean modular structure such as:
+
+src/
+  commands/
+  events/
+  handlers/
+  database/
+  services/
+  utils/
+  config/
+  index.js
+
+Separate command handling, event handling, database logic, permissions, embeds, logging, security and utilities.
+
+Use:
+- discord.js
+- a proper persistent database
+- environment variables for secrets
+- asynchronous code
+- proper error handling
+- cooldowns/rate limits
+- permission checks
+- Discord role hierarchy checks
+- bot hierarchy checks
+- API error handling
+- graceful shutdown
+- automatic Discord reconnect handling
+
+Do not expose the bot token or any secrets.
+
+==================================================
+2. BOT OWNER SYSTEM
+==================================================
+
+Use an environment variable:
+
+BOT_OWNER_IDS=
+
+It must support multiple Discord user IDs.
+
+Example:
+
+BOT_OWNER_IDS=123456789012345678,987654321098765432
+
+Create proper helper functions:
+
+isBotOwner()
+isServerAdmin()
+hasStaffPermission()
+
+IMPORTANT:
+BOT OWNER and SERVER ADMIN are NOT the same thing.
+
+BOT OWNER:
+- Has access to owner-only commands.
+- Can modify the bot's server profile/branding.
+- Can use .cmds.
+- Can access owner-level configuration.
+
+SERVER ADMIN:
+- Has Discord Administrator permission.
+- Can use .cmds.
+- Can use normal server administration features.
+- Does NOT automatically become a bot owner.
+- Does NOT automatically receive bot-profile/branding permissions.
+- Does NOT automatically receive blacklist permission.
+
+==================================================
+3. SERVER-SPECIFIC BOT PROFILE / BRANDING
+==================================================
+
+THIS IS VERY IMPORTANT.
+
+I want the bot to have a customizable SERVER-SPECIFIC BOT PROFILE.
+
+I am NOT asking to simply change the bot's global Discord account profile.
+
+Use Discord's server-profile / per-server customization capabilities wherever Discord's API supports them, similar to the server-specific bot profile presentation used by bots such as Guilt.
+
+The goal is:
+
+Server A:
+Bot has one server-specific profile/name/appearance.
+
+Server B:
+Bot can have a different server-specific profile/name/appearance.
+
+DO NOT accidentally implement these as global profile changes if Discord provides a server-specific method.
+
+BOT-OWNER ONLY:
+
+.setname <name>
+.setavatar
+.setbanner
+.seteffect <effect>
+.setcolor <color>
+
+Also support server-specific:
+- name/display name/nickname where supported
+- avatar where supported
+- banner where supported
+- profile effects where supported
+- profile colors where supported
+- status/activity/presence where supported
+
+Only BOT_OWNER_IDS may use these.
+
+Even a Discord Administrator must be denied.
+
+Do not fake Discord API features.
+
+If a requested server-profile feature is supported by Discord's current API, implement it properly.
+
+If a feature is restricted by Discord's API, permissions, endpoint availability, or bot limitations, handle it gracefully and explain exactly what is and isn't possible instead of pretending it worked.
+
+==================================================
+4. .CMDS
+==================================================
+
+.cmds is available ONLY to:
+
+- Bot Owner
+OR
+- Server Administrator
+
+Normal members cannot use it.
+
+When an authorized user runs:
+
+.cmds
+
+The bot must:
+
+1. Dynamically generate the command list from the ACTUAL implemented commands and aliases.
+2. DM the full command list to the person who used .cmds.
+3. Organize the commands into categories.
+4. Use the server's CURRENT prefix.
+5. Include aliases.
+6. Include syntax and short descriptions.
+7. Show owner-only commands ONLY to bot owners.
+8. Never publicly display the complete command list.
+
+Suggested categories:
+
+General
+Moderation
+Security
+Protection
+Jail
+Tickets
+Blacklist
+Whitelist
+Roles
+Embeds
+Configuration
+Leveling
+Counting
+Anti-Spam
+Word Filter
+Emoji/Sticker
+Backup
+Server
+Utility
+Owner
+
+After the DM succeeds:
+
+Immediately delete the original .cmds message.
+
+Then send:
+
+୨୧ **Got it!!** Sent the commands in your DMs 📨!
+
+If the user's DMs are closed:
+- Do not delete the .cmds message.
+- Tell them to enable DMs.
+- Do not silently fail.
+
+If a normal member uses .cmds:
+- deny access with a clean permission error.
+
+==================================================
+5. AESTHETIC EMBED SYSTEM
+==================================================
+
+All bot responses should have a clean, cute, modern aesthetic.
+
+Default design:
+- clean
+- readable
+- black/white style
+- minimal
+- professional
+- customizable
+
+Use randomized cute decorative symbols.
+
+IMPORTANT:
+Decorative symbols must NOT contain decorative/fancy alphabet letters.
+
+DO NOT use fancy letters such as:
+
+℘ ℳ ℱ 𝄞 𝒢 𝒞 ℐ ℋ ℛ ℬ ℒ ϑ 𝝑 𝒜
+
+Use SYMBOLS/ORNAMENTS only, such as:
+
+♡
+☆
+✦
+✧
+୨୧
+౨ৎ
+𐙚
+ꔫ
+⪩
+⪨
+𓂃
+𓈒
+◌
+❊
+༺
+༻
+⊰
+⊱
+︶
+︵
+﹏
+ꕤ
+◞
+◟
+◝
+꒰
+꒱
+૮
+ა
+ฅ
+⊃
+⊂
+՞
+ﻌ
+៸៸៸
+‹𝟹
+ʚ
+𓋜
+𓍯
+𓏴
+𓏵
+𓋫
+𓌔
+𓇯
+𓉸
+𓃉
+𓊆
+𓊇
+𑁥
+ꪆৎ
+✿
+ꕮ
+⪨
+⌑
+◍
+५
+꩜
+⬞
+⬫
+ܻ
+‧₊˚
+⋅
+₊
+˙
+｡
+˚
+・
+╱
+✟
+♰
+†
+♱
+✚
+✙
+༽
+༼
+⏜
+︵
+
+Randomize these decorations across embeds.
+
+Do NOT overuse them.
+
+Examples:
+
+୨୧ **User banned**
+
+𓂃 **Server Information**
+
+✦ **Completed!**
+
+Keep the actual message text normal and readable.
+
+==================================================
+6. GENERAL COMMANDS
+==================================================
+
+Implement useful server commands including:
+
+.help
+.ping
+.botinfo
+.serverinfo
+.userinfo [@user]
+.roleinfo <role>
+.channelinfo [#channel]
+.avatar [@user]
+.banner [@user]
+.membercount
+.roles
+.channels
+.invites
+.boosts
+.boosters
+.emojis
+.stickers
+
+Add aliases where appropriate.
+
+==================================================
+7. MODERATION SYSTEM
+==================================================
+
+Implement:
+
+.ban @user [reason]
+.unban USER_ID
+.kick @user [reason]
+.timeout @user [time] [reason]
+.untimeout @user
+.mute @user [time]
+.unmute @user
+.warn @user [reason]
+.warnings @user
+.clear [amount]
+.purge [amount]
+.lock
+.unlock
+.slowmode [seconds]
+.lockdown
+.softban
+.nick @user [nickname]
+.role @user <name|mention|ID>
+
+.role should toggle the specified role.
+
+Every moderation command needs:
+- permission checking
+- staff role permission checking
+- hierarchy checking
+- bot hierarchy checking
+- reason support
+- useful error messages
+- logging
+- audit-log support where appropriate
+
+==================================================
+8. STAFF ROLE PERMISSIONS
+==================================================
+
+Commands:
+
+.setroleperms @role lock unlock role blacklist jail unjail clear ticket mute unmute timeout untimeout
+
+.setroleperms @role clearperms
+
+.roleperms
+
+Allow authorized server administrators to configure which roles can use which staff commands.
+
+Administrators receive normal staff permissions automatically.
+
+BUT:
+
+Administrator permission does NOT automatically grant blacklist permission.
+
+Blacklist permission must be explicitly controlled.
+
+==================================================
+9. JAIL SYSTEM
+==================================================
+
+Implement a complete jail system.
+
+.setjail
+
+Allow configuration of:
+- jail role
+- jail channel
+- jail permissions
+- logging
+
+When someone is jailed:
+- save their previous roles
+- remove roles that should be removed
+- give jail role
+- restrict their access
+- store everything persistently
+
+.unjail @user
+
+When unjailed:
+- remove jail role
+- restore previous roles
+- handle deleted roles safely
+
+If a jailed member leaves and rejoins:
+- detect their stored jail status
+- automatically reapply jail
+
+==================================================
+10. TICKET SYSTEM
+==================================================
+
+.setupticket
+
+Create a complete ticket system with:
+
+- ticket panel
+- ticket creation
+- close
+- delete
+- staff access
+- configurable category
+- configurable naming
+- permissions
+- logs
+- transcripts where possible
+
+==================================================
+11. BLACKLIST
+==================================================
+
+Commands:
+
+.blacklist @user
+.blacklist list
+.remove blacklist @user
+
+Blacklist permission is SPECIAL.
+
+Even Discord Administrators MUST NOT automatically receive blacklist permission.
+
+Only:
+- bot owner
+- explicitly permitted staff role
+- or whatever explicit blacklist permission configuration specifies
+
+may use blacklist.
+
+Store blacklisted users by Discord USER ID.
+
+When a blacklisted user rejoins:
+- detect them
+- automatically kick/ban according to configuration
+- continue doing this on future rejoins
+- remain blacklisted until explicitly removed
+
+Whitelist:
+
+.white @user
+.whitelist
+.remove white @user
+
+Whitelisted users should be exempt from applicable security/protection systems.
+
+==================================================
+12. SECURITY / ANTI-NUKE
+==================================================
+
+Commands:
+
+.logchannel [#channel]
+.fullsec
+.status
+.limits
+
+.limits should be an alias for the appropriate security-limit command.
+
+.resetc​ounts
+
+.fullsec must protect against unauthorized destructive actions including:
+
+- mass kicks
+- mass bans
+- channel deletion
+- channel editing
+- role deletion
+- role editing
+- webhook creation
+- webhook deletion
+- server setting changes
+- mass role stripping
+- other suspicious destructive actions
+
+Use Discord audit logs to identify the responsible user whenever possible.
+
+Log security events to:
+- configured security log
+- #sec if configured
+
+Implement:
+- thresholds
+- counters
+- cooldowns
+- configurable limits
+- whitelist
+- punishments
+- persistent security configuration
+
+When an unauthorized action is detected:
+- identify the executor
+- check whitelist
+- check permissions
+- record the offense
+- apply the configured punishment
+- log everything
+
+==================================================
+13. SNIPE
+==================================================
+
+.snipe [#channel]
+
+Store recently deleted messages.
+
+Show:
+- author
+- content
+- attachments if possible
+- timestamp
+- channel
+
+Use proper permission checks.
+
+==================================================
+14. WORD FILTER
+==================================================
+
+.wordfilter [on|off]
+.addword <word>
+.removeword <word>
+.wordlist
+
+Use WHOLE-WORD matching.
+
+Exempt:
+- server owner
+- bot
+- configured staff
+- whitelisted users
+
+When a filtered word is detected:
+- delete the message
+- optionally warn/timeout according to configuration
+- log the action
+
+==================================================
+15. ANTI-SPAM
+==================================================
+
+.antispam [on|off]
+
+Detect:
+- rapid messages
+- repeated messages
+- link spam
+- image spam
+- attachment spam
+- burst spam
+
+When triggered:
+- delete spam burst where possible
+- apply short timeout according to configuration
+- log the event
+
+Exempt:
+- server owner
+- bot
+- configured staff
+- whitelist
+
+Allow configurable thresholds.
+
+==================================================
+16. EMOJI / STICKER STEALING
+==================================================
+
+.setemojichannel [#channel]
+
+In the configured channel, automatically detect custom emojis and stickers.
+
+Copy them into the server at the highest quality Discord's API allows.
+
+Support:
+- static emoji
+- animated emoji
+- stickers where Discord permits copying
+- emoji names
+- aliases where possible
+
+After processing:
+SUCCESS → react with ✅
+FAILURE → react with ❌
+
+Handle:
+- permissions
+- duplicates
+- file size limits
+- unsupported formats
+- Discord API limitations
+
+Do not claim an unsupported sticker or format was copied.
+
+==================================================
+17. COLOR ROLES
+==================================================
+
+.setcolors [#channel]
+.colors
+
+Create a color-role panel.
+
+Members type the corresponding number to receive the selected color role.
+
+Store:
+
+number
+role name
+HEX
+role ID
+
+When selecting another color:
+- remove ONLY their previous color role belonging to this color-role system
+- never remove unrelated roles
+- keep the color panel message
+- delete the member's number message
+
+Persist everything in the database.
+
+==================================================
+18. LEVELING SYSTEM
+==================================================
+
+Commands:
+
+.rank [@user]
+.leaderboard
+.top
+
+.top is an alias for leaderboard.
+
+.setlevelrole <level> @role
+.removelevelrole <level>
+.levelroles
+.resetxp @user
+.setlevelchannel [#channel]
+
+Implement:
+- XP
+- cooldowns
+- anti-farming
+- persistent XP
+- leaderboard
+- automatic level roles
+- level-up embeds
+- configurable XP amounts
+- configurable level rewards
+
+==================================================
+19. COUNTING SYSTEM
+==================================================
+
+.setcounting [#channel]
+.counting
+
+Features:
+- sequential counting
+- same user cannot count twice consecutively
+- incorrect number gets deleted
+- mistake resets count to 0
+- persistent count
+- clean success/error messages
+
+==================================================
+20. BACKUPS
+==================================================
+
+Commands:
+
+.backup
+.import
+
+Create a server backup system.
+
+Back up what Discord's API reasonably allows, including:
+
+- categories
+- channels
+- roles
+- permissions
+- server configuration supported by the API
+- bot configuration
+- system configuration
+- relevant settings
+
+Do NOT pretend to back up things Discord does not allow bots to export/import.
+
+Handle:
+- role hierarchy
+- missing permissions
+- deleted objects
+- API limitations
+
+Store backup metadata persistently.
+
+==================================================
+21. SERVER CONFIGURATION
+==================================================
+
+Commands:
+
+.setprefix <prefix>
+.setdeletechannel [on|off]
+.setwelcome [#channel]
+.setemojichannel [#channel]
+
+Also:
+
+.setname
+.setavatar
+.setbanner
+.seteffect
+.setcolor
+
+The last five profile commands are BOT-OWNER ONLY.
+
+.setprefix and other server configuration commands should use the proper server-admin/staff permission system.
+
+==================================================
+22. WELCOME SYSTEM
+==================================================
+
+.setwelcome [#channel]
+
+Create customizable welcome messages/embeds.
+
+Support variables such as:
+{user}
+{username}
+{server}
+{membercount}
+{channel}
+
+Use the same clean aesthetic embed system.
+
+==================================================
+23. CUSTOM EMBED BUILDER
+==================================================
+
+Create a complete custom embed system.
+
+Allow authorized staff to:
+- create embed
+- edit embed
+- save template
+- load template
+- delete template
+- send embed
+- choose target channel
+- configure title
+- description
+- color
+- footer
+- thumbnail
+- image
+- author
+- timestamp
+
+Support variables.
+
+Allow templates to be stored in the database.
+
+==================================================
+24. CUSTOM ALIASES
+==================================================
+
+Allow server administrators to create custom aliases.
+
+Examples:
+
+.alias add moderation ban
+.alias remove moderation
+.alias list
+
+Aliases must use the current server prefix.
+
+Prevent:
+- dangerous alias loops
+- recursive aliases
+- overriding protected owner commands
+- invalid commands
+
+==================================================
+25. COMMAND PERMISSIONS
+==================================================
+
+Allow configurable command permissions per server.
+
+Commands can be restricted to:
+- everyone
+- members
+- staff
+- specific role
+- administrator
+- bot owner
+
+Bot-owner-only commands can NEVER be overridden by server configuration.
+
+==================================================
+26. LOGGING
+==================================================
+
+Create a complete logging system.
+
+Log relevant events such as:
+- bans
+- kicks
+- timeouts
+- warnings
+- deleted messages
+- edited messages where configured
+- role changes
+- channel changes
+- security events
+- anti-nuke actions
+- blacklist actions
+- jail actions
+- tickets
+- emoji/sticker copying
+- configuration changes
+
+Allow separate configurable log channels.
+
+==================================================
+27. DATABASE
+==================================================
+
+Use a REAL persistent database.
+
+Do not store important information only in memory.
+
+Persist:
+
+- guild settings
+- prefixes
+- jail configuration
+- jailed users
+- previous roles
+- blacklist
+- whitelist
+- warnings
+- security settings
+- security counters
+- role permissions
+- aliases
+- embeds/templates
+- logs
+- XP
+- level roles
+- counting
+- color roles
+- ticket configuration
+- word filter
+- anti-spam
+- backups
+- welcome configuration
+- emoji configuration
+
+Database initialization must happen automatically.
+
+Do not require manual table creation.
+
+==================================================
+28. BOT HOSTING NET COMPATIBILITY
+==================================================
+
+IMPORTANT:
+
+This bot will be hosted on BOT HOSTING NET and may also be moved between hosting providers.
+
+The project must NOT depend on Replit.
+
+Do NOT require:
+- Replit database
+- Replit authentication
+- Replit Secrets API
+- Replit webhooks
+- Replit deployment tools
+- Replit-specific filesystem behavior
+- Replit-specific paths
+- Replit-only uptime systems
+
+The bot must be a normal portable Node.js Discord bot.
+
+It should work when downloaded from Replit and uploaded to Bot Hosting Net.
+
+Include:
+
+package.json
+
+with a proper start script, for example:
+
+"start": "node src/index.js"
+
+Use:
+
+process.env.DISCORD_TOKEN
+
+for the bot token.
+
+Use environment variables such as:
+
+DISCORD_TOKEN=
+BOT_OWNER_IDS=
+DATABASE_URL=
+DEFAULT_PREFIX=.
+
+Never hardcode secrets.
+
+Include:
+
+.env.example
+
+but NEVER include a real token.
+
+The bot should automatically start when the hosting panel launches the Node.js process.
+
+Do not require:
+- browser login
+- manual terminal interaction
+- Replit-specific deployment
+- fake Replit 24/7 ping systems
+
+Use relative paths.
+
+Do not assume:
+- /home/runner
+- Replit
+- a specific Linux user
+- a specific port
+- a specific host
+
+Important data must be stored in the persistent database, not temporary local files.
+
+==================================================
+29. BOT HOSTING NET STARTUP
+==================================================
+
+Make the project ready to upload to Bot Hosting Net.
+
+After configuring environment variables/database, the host should only need to run:
+
+npm install
+
+then:
+
+npm start
+
+The bot should automatically connect to Discord.
+
+Handle:
+- crashes
+- reconnects
+- rate limits
+- API failures
+- database connection failures
+- shutdown signals
+
+Do not expose secrets in logs.
+
+==================================================
+30. REQUIRED DISCORD INTENTS / PERMISSIONS
+==================================================
+
+Document every required Discord Gateway Intent.
+
+Document every required bot permission.
+
+The README must explain exactly which intents and permissions need to be enabled in the Discord Developer Portal.
+
+Do not request unnecessary permissions.
+
+==================================================
+31. SECURITY
+==================================================
+
+Never expose:
+
+- Discord token
+- database password
+- API keys
+- environment variables
+- private configuration
+
+Validate user input.
+
+Prevent command injection.
+
+Prevent permission bypasses.
+
+Prevent role hierarchy abuse.
+
+Prevent unauthorized owner commands.
+
+Prevent alias recursion.
+
+Add cooldowns and rate limits where needed.
+
+==================================================
+32. ERROR HANDLING
+==================================================
+
+Every command should have clean error handling.
+
+Do not dump ugly stack traces into Discord.
+
+Show clean aesthetic errors.
+
+Log technical errors to the console/logging system.
+
+Handle Discord API errors gracefully.
+
+==================================================
+33. README
+==================================================
+
+Create a complete README.md explaining:
+
+- installation
+- npm install
+- npm start
+- environment variables
+- BOT_OWNER_IDS
+- database setup
+- Discord Developer Portal setup
+- required intents
+- required permissions
+- Bot Hosting Net deployment
+- configuration
+- command system
+- prefix system
+- troubleshooting
+
+==================================================
+34. IMPORTANT SCREENSHOT COMMAND REQUIREMENTS
+==================================================
+
+The screenshots I provided use "xx" as an example prefix.
+
+DO NOT hardcode "xx".
+
+Those commands represent the command names/features.
+
+If the server prefix is:
+
+.
+
+then:
+
+xxblacklist → .blacklist
+xxsetjail → .setjail
+xxfullsec → .fullsec
+
+If the server prefix changes to !:
+
+!blacklist
+!setjail
+!fullsec
+
+etc.
+
+Implement the following screenshot-based commands exactly as features:
+
+Whitelist:
+.white @user
+.whitelist
+.remove white @user
+
+Blacklist:
+.blacklist @user
+.blacklist list
+.remove blacklist @user
+
+Security:
+.logchannel [#channel]
+.fullsec
+.status
+.limits
+.resetc​ounts
+
+Jail/tickets/backups:
+.setjail
+.setupticket
+.backup
+.import
+
+Server configuration:
+.setname
+.setavatar
+.setbanner
+.setprefix
+.setdeletechannel [on|off]
+.setwelcome [#channel]
+.setemojichannel [#channel]
+
+Staff permissions:
+.setroleperms
+.roleperms
+
+Moderation:
+.lock
+.unlock
+.ban
+.unban
+.kick
+.role
+.mute
+.unmute
+
+Snipe:
+.snipe
+
+Word filter:
+.wordfilter
+.addword
+.removeword
+.wordlist
+
+Color roles:
+.setcolors
+.colors
+
+Leveling:
+.rank
+.leaderboard
+.top
+.setlevelrole
+.removelevelrole
+.levelroles
+.resetxp
+.setlevelchannel
+
+Counting:
+.setcounting
+.counting
+
+Anti-spam:
+.antispam
+
+==================================================
+35. COMMAND ALIASES
+==================================================
+
+Support useful aliases.
+
+Examples:
+
+.leaderboard → .top
+.limits → security limits command
+.purge → clear
+.untimeout → remove timeout
+
+Allow custom aliases through the alias system.
+
+The actual .cmds output must automatically detect and display aliases.
+
+==================================================
+36. BOT MENTION RESPONSE
+==================================================
+
+When someone mentions the bot, respond with a clean aesthetic embed.
+
+Example:
+
+୨୧ **hello!!**
+My server prefix is `.`
+
+The prefix must automatically update if the server changes it.
+
+==================================================
+37. QUALITY REQUIREMENTS
+==================================================
+
+Do NOT give me a tiny demo.
+
+Do NOT create placeholder commands.
+
+Do NOT make commands that only send "coming soon".
+
+Actually implement the systems.
+
+Use reusable services and utilities.
+
+Avoid duplicated code.
+
+Use proper database models/schema.
+
+Make the project easy to maintain and expand.
+
+Every command should be tested for:
+- missing arguments
+- invalid users
+- invalid roles
+- missing permissions
+- hierarchy problems
+- bot permissions
+- Discord API errors
+- database errors
+
+==================================================
+38. FINAL VERIFICATION
+==================================================
+
+Before considering the project finished, verify:
+
+- prefix commands work
+- prefix changes persist
+- .cmds is owner/admin only
+- .cmds sends privately via DM
+- .cmds uses the current prefix
+- .cmds deletes the original message after successful DM
+- bot-owner-only profile commands cannot be used by server admins
+- server-specific bot profile functionality is used where Discord supports it
+- blacklist permission is separate from Administrator
+- blacklist survives restarts
+- jailed users remain jailed after rejoining
+- previous roles are restored on unjail
+- security counters persist correctly
+- anti-nuke checks audit logs
+- emoji/sticker stealing works within Discord API limitations
+- color roles only remove previous color-system roles
+- XP persists
+- counting persists
+- backups work within Discord API limitations
+- embeds are clean and aesthetic
+- decorative symbols contain NO fancy alphabet letters
+- aliases work
+- command permissions work
+- database persists across restarts
+- no secrets are hardcoded
+- no Replit-only dependency exists
+- npm install works
+- npm start works
+- project is portable to Bot Hosting Net
+
+The finished project must be a complete, professional Discord system bot that can be downloaded from Replit and hosted on Bot Hosting Net without rewriting the bot.

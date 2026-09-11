@@ -1,0 +1,95 @@
+# Production Discord System Bot
+
+A portable, prefix-command Discord system bot built with Node.js, discord.js, and PostgreSQL. It does not depend on Replit and can be uploaded to Bot Hosting Net or another Node.js host.
+
+## Start
+
+```bash
+npm install
+npm start
+```
+
+The same commands work with pnpm:
+
+```bash
+pnpm install
+pnpm --filter @workspace/discord-system-bot start
+```
+
+## Environment
+
+Copy `.env.example` to `.env` locally, or set these values in your hosting panel:
+
+| Variable | Required | Description |
+| --- | --- | --- |
+| `DISCORD_TOKEN` | yes | Bot token. Never commit this value. |
+| `BOT_OWNER_IDS` | yes | Comma-separated Discord user IDs with owner-only access. |
+| `DATABASE_URL` | yes | PostgreSQL connection string. |
+| `DEFAULT_PREFIX` | no | Initial prefix for new servers, defaults to `.`. |
+| `DATABASE_SSL` | no | Set `true` when the database provider requires TLS. |
+
+The database schema is created automatically on startup. Important bot state is stored in PostgreSQL, not memory.
+
+## Discord Developer Portal
+
+Enable these **Privileged Gateway Intents**:
+
+- Server Members Intent — welcome, blacklist, jail, role and member systems.
+- Message Content Intent — required for prefix commands and filters.
+- Presence Intent — only used for the bot presence and can be disabled if not needed.
+
+Request these bot permissions at minimum:
+
+- View Channels
+- Send Messages
+- Embed Links
+- Read Message History
+- Manage Messages
+- Manage Channels
+- Manage Roles
+- Manage Nicknames
+- Kick Members
+- Ban Members
+- Moderate Members
+- View Audit Log
+- Manage Webhooks (only if webhook protection is enabled)
+- Add Reactions
+
+Use the smallest permission set that matches the systems you enable. The bot still cannot override Discord's role hierarchy or API limitations.
+
+## Command behavior
+
+The bot is prefix based. The default is `.`, and `.setprefix !` changes the server to `!`. Help output is generated from the actual command registry and sent by DM to bot owners and server administrators only. Owner-only profile commands are never granted by server administrator permission.
+
+Implemented command groups include:
+
+- General information and member tools
+- Moderation: ban, unban, kick, timeout, warnings, clear, lock, slowmode, nickname, roles
+- Staff role permissions
+- Persistent jail and rejoin reapplication
+- Private ticket panels
+- Blacklist and whitelist with separate permission handling
+- Audit-log anti-nuke thresholds
+- Whole-word filtering and anti-spam
+- Deleted-message snipe
+- XP, levels, automatic level roles, leaderboard
+- Counting channel
+- Welcome messages and templates
+- Server backups of data Discord exposes to bots
+- Safe custom aliases
+- Per-server bot nickname
+
+Emoji/sticker copying, per-server bot avatar/banner/effect/color, and full backup restore are constrained by Discord's API. The bot reports those limits rather than claiming unsupported actions completed.
+
+## Hosting
+
+Set the three required environment variables in the hosting panel, choose Node.js, run `npm install`, and use `npm start` as the startup command. No browser login, Replit-specific service, fixed port, local file database, or uptime ping is required.
+
+## Security notes
+
+- Secrets are read only from environment variables.
+- Owner identity is separate from server administrator identity.
+- Every destructive member action checks actor hierarchy and bot hierarchy.
+- Custom aliases can target only implemented non-owner commands and are stored per server.
+- The anti-nuke system uses Discord audit logs, persistent security events, thresholds, whitelist checks, and configurable punishment.
+- Technical errors are logged to the host console; Discord users receive clean error embeds.

@@ -1,18 +1,11 @@
-import {
-  Client,
-  Collection,
-  GatewayIntentBits,
-  Partials,
-  ChannelType,
-  Events,
-  PermissionFlagsBits,
-} from "discord.js";
+import { Client, GatewayIntentBits, Partials, Events } from "discord.js";
 import { assertConfig, config } from "./config.js";
 import { Database } from "./db.js";
 import { allCommands, executeCommand } from "./commands.js";
 import { SecurityService } from "./security.js";
 import { error, info, success } from "./embeds.js";
 import { renderTemplate, levelFromXp } from "./utils.js";
+import { handlePanelButton, handleSlashInteraction, registerSlashCommands, slashDefinitions } from "./slash.js";
 
 assertConfig();
 
@@ -36,9 +29,16 @@ const state = {
   messages: new Map(),
 };
 
-client.once(Events.ClientReady, (ready) => {
+client.once(Events.ClientReady, async (ready) => {
   console.info(`Logged in as ${ready.user.tag} in ${client.guilds.cache.size} servers`);
   ready.user.setPresence({ activities: [{ name: "server protection" }], status: "online" });
+  await registerSlashCommands(client);
+});
+
+client.on(Events.GuildCreate, async (guild) => {
+  await guild.commands.set(slashDefinitions.map((command) => command.toJSON())).catch((err) => {
+    console.error(`[slash-register:${guild.id}]`, err);
+  });
 });
 
 client.on(Events.MessageCreate, async (message) => {
@@ -137,23 +137,15 @@ client.on(Events.GuildMemberAdd, async (member) => {
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
-  if (!interaction.isButton() || interaction.customId !== "ticket:create") return;
-  const settings = await db.getGuild(interaction.guild.id);
-  const existing = interaction.guild.channels.cache.find((c) => c.topic === `ticket-owner:${interaction.user.id}`);
-  if (existing) return interaction.reply({ content: `You already have a ticket: ${existing}`, ephemeral: true });
-  const channel = await interaction.guild.channels.create({
-    name: `ticket-${interaction.user.username}`.slice(0, 90),
-    type: ChannelType.GuildText,
-    parent: settings.ticket_category_id || undefined,
-    topic: `ticket-owner:${interaction.user.id}`,
-    permissionOverwrites: [
-      { id: interaction.guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
-      { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
-      { id: interaction.guild.members.me.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels] },
-    ],
-  });
-  await channel.send({ embeds: [info("Support ticket", `<@${interaction.user.id}>, staff will be with you shortly.\nUse \`${settings.prefix}close\` to close this ticket.`)] });
-  await interaction.reply({ content: `Ticket created: ${channel}`, ephemeral: true });
+  try {
+    if (interaction.isChatInputCommand()) await handleSlashInteraction(interaction, db);
+    else if (interaction.isButton()) await handlePanelButton(interaction, db);
+  } catch (err) {
+    console.error("[interaction]", err);
+    const reply = { embeds: [error("Something went wrong", "Discord rejected that interaction. Check the bot permissions and panel configuration.")], ephemeral: true };
+    if (interaction.replied || interaction.deferred) await interaction.followUp(reply).catch(() => {});
+    else await interaction.reply(reply).catch(() => {});
+  }
 });
 
 const shutdown = async (signal) => {

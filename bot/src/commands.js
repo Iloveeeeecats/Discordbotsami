@@ -24,6 +24,10 @@ function targetRole(message, token) {
   return message.guild.roles.cache.get(id) || message.guild.roles.cache.find((role) => role.name.toLowerCase() === token?.toLowerCase());
 }
 
+function mediaSource(message, args) {
+  return message.attachments.first()?.url || args[0];
+}
+
 function amount(value, fallback = 10) {
   const parsed = Number(value ?? fallback);
   return Number.isInteger(parsed) && parsed >= 1 && parsed <= 100 ? parsed : null;
@@ -234,23 +238,53 @@ const configuration = [
     await ctx.db.updateGuild(ctx.message.guild.id, { delete_command_messages: enabled === "on" });
     await ctx.reply({ embeds: [success("Command deletion updated", `Command messages will ${enabled === "on" ? "" : "not "}be deleted.`)] });
   }}),
-  command({ name: "setname", category: "Owner", usage: "name", ownerOnly: true, description: "Set this server's bot nickname.", async execute(ctx) {
+  command({ name: "setname", category: "Owner", usage: "name", ownerOnly: true, description: "Set the bot's global username.", async execute(ctx) {
     const name = ctx.args.join(" ").trim().slice(0, 32);
     if (!name) return ctx.fail("Name required", "Provide a nickname.");
+    await ctx.client.user.setUsername(name);
+    await ctx.reply({ embeds: [success("Global profile updated", `The bot's global username is now **${name}**.`)] });
+  }}),
+  command({ name: "servername", category: "Owner", usage: "name", ownerOnly: true, description: "Set the bot's nickname in this server.", async execute(ctx) {
+    const name = ctx.args.join(" ").trim().slice(0, 32);
+    if (!name) return ctx.fail("Name required", "Provide a server nickname.");
     await ctx.message.guild.members.me.setNickname(name);
     await ctx.reply({ embeds: [success("Server profile updated", `My nickname in this server is now **${name}**.`)] });
   }}),
-  command({ name: "setavatar", category: "Owner", ownerOnly: true, description: "Explain Discord's server-profile avatar limitation.", async execute(ctx) {
-    await ctx.reply({ embeds: [warning("Server avatar unavailable", "Discord does not expose a supported per-server bot avatar endpoint for this command. I will not change the bot's global avatar by mistake.")] });
+  command({ name: "setavatar", category: "Owner", usage: "<image URL or attachment>", ownerOnly: true, description: "Set the bot's global avatar.", async execute(ctx) {
+    const source = mediaSource(ctx.message, ctx.args);
+    if (!source) return ctx.fail("Image required", "Attach an image or provide a public image URL.");
+    await ctx.client.user.setAvatar(source);
+    await ctx.reply({ embeds: [success("Global profile updated", "The bot's global avatar was updated.")] });
   }}),
-  command({ name: "setbanner", category: "Owner", ownerOnly: true, description: "Explain Discord's server-profile banner limitation.", async execute(ctx) {
-    await ctx.reply({ embeds: [warning("Server banner unavailable", "Discord does not expose a supported per-server bot banner endpoint. I will not pretend this changed.")] });
+  command({ name: "serveravatar", category: "Owner", usage: "<image URL or attachment>", ownerOnly: true, description: "Set the bot's avatar for this server only.", async execute(ctx) {
+    const source = mediaSource(ctx.message, ctx.args);
+    if (!source) return ctx.fail("Image required", "Attach an image or provide a public image URL.");
+    await ctx.message.guild.members.editMe({ avatar: source });
+    await ctx.reply({ embeds: [success("Server profile updated", "The bot's avatar for this server was updated.")] });
   }}),
-  command({ name: "seteffect", category: "Owner", ownerOnly: true, description: "Explain Discord's server-profile effect limitation.", async execute(ctx) {
-    await ctx.reply({ embeds: [warning("Profile effect unavailable", "Discord's bot API does not provide a supported per-server profile-effect endpoint.")] });
+  command({ name: "setbanner", category: "Owner", usage: "<image URL or attachment>", ownerOnly: true, description: "Set the bot's global banner.", async execute(ctx) {
+    const source = mediaSource(ctx.message, ctx.args);
+    if (!source) return ctx.fail("Image required", "Attach an image or provide a public image URL.");
+    await ctx.client.user.setBanner(source);
+    await ctx.reply({ embeds: [success("Global profile updated", "The bot's global banner was updated.")] });
   }}),
-  command({ name: "setcolor", category: "Owner", ownerOnly: true, description: "Explain Discord's server-profile color limitation.", async execute(ctx) {
-    await ctx.reply({ embeds: [warning("Profile color unavailable", "Discord's bot API does not provide a supported per-server profile-color endpoint. Use the color-role system instead.")] });
+  command({ name: "serverbanner", category: "Owner", usage: "<image URL or attachment>", ownerOnly: true, description: "Set the bot's banner for this server only.", async execute(ctx) {
+    const source = mediaSource(ctx.message, ctx.args);
+    if (!source) return ctx.fail("Image required", "Attach an image or provide a public image URL.");
+    await ctx.message.guild.members.editMe({ banner: source });
+    await ctx.reply({ embeds: [success("Server profile updated", "The bot's banner for this server was updated.")] });
+  }}),
+  command({ name: "serverbio", category: "Owner", usage: "text", ownerOnly: true, description: "Set the bot's server-specific profile bio.", async execute(ctx) {
+    const bio = ctx.args.join(" ").trim().slice(0, 190);
+    if (!bio) return ctx.fail("Bio required", "Provide the server-specific profile bio.");
+    await ctx.message.guild.members.editMe({ bio });
+    await ctx.reply({ embeds: [success("Server profile updated", "The bot's server-specific bio was updated.")] });
+  }}),
+  command({ name: "seteffect", category: "Owner", ownerOnly: true, description: "Explain Discord's profile-effect limitation.", async execute(ctx) {
+    await ctx.reply({ embeds: [warning("Profile effect unavailable", "Discord's bot API does not currently expose a supported profile-effect endpoint.")] });
+  }}),
+  command({ name: "setcolor", category: "Owner", ownerOnly: true, description: "Explain Discord's profile-color limitation.", async execute(ctx) {
+    await ctx.reply({ embeds: [warning("Profile color unavailable", "Discord's bot API does not currently expose a supported profile-color endpoint. Use the color-role system instead.")] });
   }}),
   command({ name: "alias", category: "Configuration", usage: "add|remove|list alias [command]", adminOnly: true, description: "Manage safe server-specific aliases.", async execute(ctx) {
     const action = ctx.args[0]?.toLowerCase();
@@ -534,10 +568,10 @@ const systems = [
 ];
 
 const owner = [
-  command({ name: "cmds", aliases: ["commands", "help"], category: "General", adminOnly: true, description: "DM the private command catalog.", async execute(ctx) {
+  command({ name: "cmds", aliases: ["cmd", "commands", "help"], category: "General", adminOnly: true, description: "DM the private command catalog.", async execute(ctx) {
     const ownerView = isBotOwner(ctx.message.author.id);
     const groups = new Map();
-    for (const cmd of ctx.commandMap.values()) {
+    for (const cmd of new Set(ctx.commandMap.values())) {
       if (cmd.ownerOnly && !ownerView) continue;
       if (!groups.has(cmd.category)) groups.set(cmd.category, []);
       groups.get(cmd.category).push(`\`${ctx.prefix}${cmd.name}${cmd.usage ? ` ${cmd.usage}` : ""}\` — ${cmd.description}${cmd.aliases?.length ? ` (aliases: ${cmd.aliases.map((a) => `${ctx.prefix}${a}`).join(", ")})` : ""}`);
@@ -551,6 +585,7 @@ const owner = [
     }
     if (current) pages.push(current);
     try {
+      await ctx.message.author.send({ embeds: [info("Command center", `Private command catalog for **${ctx.message.guild.name}**.\nCurrent prefix: \`${ctx.prefix}\`\nUse \`${ctx.prefix}help\` any time to reopen this panel.`)] });
       for (const [index, page] of pages.entries()) await ctx.message.author.send({ embeds: [embed(`Command catalog ${pages.length > 1 ? `${index + 1}/${pages.length}` : ""}`, page)] });
       await ctx.message.delete();
       await ctx.message.channel.send({ embeds: [success("Got it!!", "Sent the commands in your DMs 📨!")] });

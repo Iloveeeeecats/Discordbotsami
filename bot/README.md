@@ -77,9 +77,31 @@ Implemented command groups include:
 - Welcome messages and templates
 - Server backups of data Discord exposes to bots
 - Safe custom aliases
-- Per-server bot nickname
+- Global bot profile commands: `.setname`, `.setavatar`, `.setbanner`
+- Per-server bot profile commands: `.servername`, `.serveravatar`, `.serverbanner`, `.serverbio`
+- Guild slash commands: `/ticketpanel`, `/colorpanel`, `/rulepanel`, and `/embed`
 
-Emoji/sticker copying, per-server bot avatar/banner/effect/color, and full backup restore are constrained by Discord's API. The bot reports those limits rather than claiming unsupported actions completed.
+Emoji/sticker copying and backup restore follow Discord's API limits. Per-server bot avatar, banner, and bio use Discord's current Modify Current Member support. Profile effects and profile colors are still unavailable to bot accounts, so those commands explain the limitation instead of changing the global profile by mistake.
+
+## Slash panels
+
+Slash commands are registered per server when the bot starts and again when it joins a server:
+
+```text
+/ticketpanel create
+/ticketpanel edit
+/colorpanel create
+/colorpanel edit
+/rulepanel create
+/rulepanel edit
+/embed save
+/embed send
+/embed edit
+/embed delete
+/embed list
+```
+
+Panel messages store their configuration in PostgreSQL. Ticket opening text, panel copy, button labels, target channels, categories, color definitions, images, thumbnails, and rules acknowledgement roles can be edited without recreating the bot.
 
 ## Hosting
 

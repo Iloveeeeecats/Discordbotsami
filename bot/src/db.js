@@ -16,6 +16,9 @@ CREATE TABLE IF NOT EXISTS guild_settings (
   jail_channel_id TEXT,
   ticket_category_id TEXT,
   ticket_log_channel_id TEXT,
+  ticket_panel JSONB,
+  color_panel JSONB,
+  rules_panel JSONB,
   emoji_channel_id TEXT,
   level_channel_id TEXT,
   counting_channel_id TEXT,
@@ -32,6 +35,9 @@ CREATE TABLE IF NOT EXISTS guild_settings (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE guild_settings ADD COLUMN IF NOT EXISTS color_channel_id TEXT;
+ALTER TABLE guild_settings ADD COLUMN IF NOT EXISTS ticket_panel JSONB;
+ALTER TABLE guild_settings ADD COLUMN IF NOT EXISTS color_panel JSONB;
+ALTER TABLE guild_settings ADD COLUMN IF NOT EXISTS rules_panel JSONB;
 CREATE TABLE IF NOT EXISTS warnings (
   id BIGSERIAL PRIMARY KEY,
   guild_id TEXT NOT NULL,
@@ -180,6 +186,7 @@ export class Database {
       "prefix", "welcome_channel_id", "welcome_template", "log_channel_id",
       "security_log_channel_id", "delete_command_messages", "jail_role_id",
       "jail_channel_id", "ticket_category_id", "ticket_log_channel_id",
+      "ticket_panel", "color_panel", "rules_panel",
       "emoji_channel_id", "level_channel_id", "counting_channel_id",
       "color_channel_id",
       "counting_value", "counting_last_user_id", "word_filter_enabled",
@@ -397,5 +404,35 @@ export class Database {
   async getColorRoles(guildId) {
     const { rows } = await this.query("SELECT * FROM color_roles WHERE guild_id = $1 ORDER BY number", [guildId]);
     return rows;
+  }
+
+  async saveCustomEmbed(guildId, name, payload, createdBy) {
+    await this.query(
+      `INSERT INTO custom_embeds (guild_id, name, payload, created_by)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (guild_id, name) DO UPDATE
+       SET payload = $3, updated_at = NOW()`,
+      [guildId, name, payload, createdBy],
+    );
+  }
+
+  async getCustomEmbed(guildId, name) {
+    const { rows } = await this.query(
+      "SELECT * FROM custom_embeds WHERE guild_id = $1 AND name = $2",
+      [guildId, name],
+    );
+    return rows[0];
+  }
+
+  async listCustomEmbeds(guildId) {
+    const { rows } = await this.query(
+      "SELECT name, created_by, updated_at FROM custom_embeds WHERE guild_id = $1 ORDER BY name",
+      [guildId],
+    );
+    return rows;
+  }
+
+  async removeCustomEmbed(guildId, name) {
+    await this.query("DELETE FROM custom_embeds WHERE guild_id = $1 AND name = $2", [guildId, name]);
   }
 }

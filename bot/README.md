@@ -79,6 +79,7 @@ Implemented command groups include:
 - Safe custom aliases
 - Global bot profile commands: `.setname`, `.setavatar`, `.setbanner`
 - Per-server bot profile commands: `.servername`, `.serveravatar`, `.serverbanner`, `.serverbio`
+- Owner-controlled profile presence: `.setstatus`, `.clearstatus`, and `/botstatus`
 - Guild slash commands: `/ticketpanel`, `/colorpanel`, `/rulepanel`, and `/embed`
 
 Emoji/sticker copying and backup restore follow Discord's API limits. Per-server bot avatar, banner, and bio use Discord's current Modify Current Member support. Profile effects and profile colors are still unavailable to bot accounts, so those commands explain the limitation instead of changing the global profile by mistake.
@@ -102,6 +103,20 @@ Slash commands are registered per server when the bot starts and again when it j
 ```
 
 Panel messages store their configuration in PostgreSQL. Ticket opening text, panel copy, button labels, target channels, categories, color definitions, images, thumbnails, and rules acknowledgement roles can be edited without recreating the bot.
+
+## Bot profile activity
+
+Configured bot owners can change the activity shown next to the bot profile:
+
+```text
+.setstatus playing Community support
+.setstatus watching 250 servers idle
+.setstatus listening Support requests
+.setstatus streaming Live support https://twitch.tv/example
+.clearstatus
+```
+
+The slash equivalent is `/botstatus set`, with activity type, activity text, online state, and stream URL options. Supported activity types are Playing, Streaming, Listening, Watching, and Competing. Discord does not expose normal custom-status text for bot accounts, so the bot uses supported activity types instead.
 
 Ticket panels open a reason picker after the user clicks the main button. Configure reasons with:
 

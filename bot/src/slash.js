@@ -10,6 +10,7 @@ import {
 } from "discord.js";
 import { error, info, success } from "./embeds.js";
 import { isBotOwner, isServerAdmin } from "./permissions.js";
+import { applyStoredPresence, normalizePresence } from "./presence.js";
 
 const adminPermissions = PermissionFlagsBits.Administrator.toString();
 const ticketButtonStyles = {
@@ -197,7 +198,47 @@ const embedCommand = new SlashCommandBuilder()
   })
   .addSubcommand((subcommand) => subcommand.setName("list").setDescription("List saved embed templates."));
 
-export const slashDefinitions = [ticketCreate, colorPanel, rulePanel, embedCommand];
+const botStatus = new SlashCommandBuilder()
+  .setName("botstatus")
+  .setDescription("View or change the bot's profile activity and online status.")
+  .addSubcommand((subcommand) => {
+    subcommand.setName("set").setDescription("Set the bot's profile activity.");
+    subcommand.addStringOption((option) =>
+      option
+        .setName("type")
+        .setDescription("Activity type shown next to the bot profile")
+        .addChoices(
+          { name: "Playing", value: "playing" },
+          { name: "Streaming", value: "streaming" },
+          { name: "Listening", value: "listening" },
+          { name: "Watching", value: "watching" },
+          { name: "Competing", value: "competing" },
+        )
+        .setRequired(true),
+    );
+    subcommand.addStringOption((option) => option.setName("text").setDescription("Activity text").setMaxLength(128).setRequired(true));
+    subcommand.addStringOption((option) =>
+      option
+        .setName("status")
+        .setDescription("Online status")
+        .addChoices(
+          { name: "Online", value: "online" },
+          { name: "Idle", value: "idle" },
+          { name: "Do not disturb", value: "dnd" },
+          { name: "Invisible", value: "invisible" },
+        )
+        .setRequired(false),
+    );
+    subcommand.addStringOption((option) => option.setName("url").setDescription("Required for streaming; Twitch or YouTube URL").setMaxLength(500).setRequired(false));
+    return subcommand;
+  })
+  .addSubcommand((subcommand) => {
+    subcommand.setName("clear").setDescription("Remove the profile activity and keep the online status.");
+    return subcommand;
+  })
+  .addSubcommand((subcommand) => subcommand.setName("view").setDescription("View the current saved bot profile status."));
+
+export const slashDefinitions = [ticketCreate, colorPanel, rulePanel, embedCommand, botStatus];
 
 const isValidUrl = (value) => {
   if (!value) return false;
@@ -453,6 +494,44 @@ async function handleEmbed(interaction, db) {
   await interaction.reply({ embeds: [success("Embed updated", action === "save" ? `Saved \`${name}\`.` : "The embed was processed.")], ephemeral: true });
 }
 
+async function handleBotStatus(interaction, db) {
+  if (!isBotOwner(interaction.user.id)) {
+    await interaction.reply({ embeds: [error("Permission denied", "Only configured bot owners can change the bot profile status.")], ephemeral: true });
+    return;
+  }
+  const action = interaction.options.getSubcommand();
+  if (action === "view") {
+    const profile = await db.getBotProfile();
+    const activity = profile.activity_text
+      ? `${profile.activity_type} — ${profile.activity_text}`
+      : "No activity";
+    await interaction.reply({
+      embeds: [info("Bot profile status", `**Presence:** ${profile.presence_status}\n**Activity:** ${activity}${profile.activity_url ? `\n**Stream:** ${profile.activity_url}` : ""}`)],
+      ephemeral: true,
+    });
+    return;
+  }
+  if (action === "clear") {
+    await db.updateBotProfile({ activity_text: null, activity_url: null });
+    await applyStoredPresence(interaction.client, db);
+    await interaction.reply({ embeds: [success("Bot status cleared", "The profile activity was removed.")] });
+    return;
+  }
+  try {
+    const normalized = normalizePresence({
+      type: interaction.options.getString("type"),
+      text: interaction.options.getString("text"),
+      status: interaction.options.getString("status") || "online",
+      url: interaction.options.getString("url"),
+    });
+    await db.updateBotProfile(normalized);
+    await applyStoredPresence(interaction.client, db);
+    await interaction.reply({ embeds: [success("Bot status updated", `The bot now shows **${normalized.activity_type} ${normalized.activity_text}** with status **${normalized.presence_status}**.`)] });
+  } catch (err) {
+    await interaction.reply({ embeds: [error("Invalid bot status", err.message)], ephemeral: true });
+  }
+}
+
 export async function registerSlashCommands(client) {
   const data = slashDefinitions.map((command) => command.toJSON());
   for (const guild of client.guilds.cache.values()) {
@@ -542,4 +621,5 @@ export async function handleSlashInteraction(interaction, db) {
   if (interaction.commandName === "colorpanel") return handleColorPanel(interaction, db);
   if (interaction.commandName === "rulepanel") return handleRulePanel(interaction, db);
   if (interaction.commandName === "embed") return handleEmbed(interaction, db);
+  if (interaction.commandName === "botstatus") return handleBotStatus(interaction, db);
 }

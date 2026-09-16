@@ -11,6 +11,7 @@ import { config } from "./config.js";
 import { canUse, commandPermissionNames, hierarchyError, isBotOwner, isServerAdmin } from "./permissions.js";
 import { cleanReason, levelFromXp, parseDuration, parseMentionOrId, renderTemplate, tokenize, truncate, wholeWordMatch, xpForLevel } from "./utils.js";
 import { embed, error, failureMessage, info, success, warning } from "./embeds.js";
+import { applyStoredPresence, normalizePresence, presenceStatuses } from "./presence.js";
 
 const command = (definition) => definition;
 
@@ -279,6 +280,28 @@ const configuration = [
     if (!bio) return ctx.fail("Bio required", "Provide the server-specific profile bio.");
     await ctx.message.guild.members.editMe({ bio });
     await ctx.reply({ embeds: [success("Server profile updated", "The bot's server-specific bio was updated.")] });
+  }}),
+  command({ name: "setstatus", aliases: ["setpresence", "setactivity"], category: "Owner", usage: "playing|streaming|listening|watching|competing text [url] [online|idle|dnd|invisible]", ownerOnly: true, description: "Set the bot's profile activity and online status.", async execute(ctx) {
+    const type = ctx.args[0]?.toLowerCase();
+    const values = ctx.args.slice(1);
+    let status = "online";
+    if (presenceStatuses.has(values.at(-1)?.toLowerCase())) status = values.pop().toLowerCase();
+    let url = null;
+    if (type === "streaming" && /^https?:\/\/\S+$/i.test(values.at(-1) || "")) url = values.pop();
+    const text = values.join(" ").trim();
+    try {
+      const normalized = normalizePresence({ type, text, status, url });
+      await ctx.db.updateBotProfile(normalized);
+      await applyStoredPresence(ctx.client, ctx.db);
+      await ctx.reply({ embeds: [success("Bot status updated", `The bot now shows **${normalized.activity_type} ${normalized.activity_text}** with status **${normalized.presence_status}**.`)] });
+    } catch (err) {
+      await ctx.reply({ embeds: [error("Invalid bot status", err.message)] });
+    }
+  }}),
+  command({ name: "clearstatus", category: "Owner", ownerOnly: true, description: "Remove the bot's profile activity.", async execute(ctx) {
+    await ctx.db.updateBotProfile({ activity_text: null, activity_url: null });
+    await applyStoredPresence(ctx.client, ctx.db);
+    await ctx.reply({ embeds: [success("Bot status cleared", "The profile activity was removed.")] });
   }}),
   command({ name: "seteffect", category: "Owner", ownerOnly: true, description: "Explain Discord's profile-effect limitation.", async execute(ctx) {
     await ctx.reply({ embeds: [warning("Profile effect unavailable", "Discord's bot API does not currently expose a supported profile-effect endpoint.")] });

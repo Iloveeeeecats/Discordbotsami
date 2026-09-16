@@ -6,6 +6,7 @@ import { SecurityService } from "./security.js";
 import { error, info, success } from "./embeds.js";
 import { renderTemplate, levelFromXp } from "./utils.js";
 import { handlePanelButton, handleSlashInteraction, registerSlashCommands, slashDefinitions } from "./slash.js";
+import { applyStoredPresence } from "./presence.js";
 
 assertConfig();
 
@@ -31,7 +32,7 @@ const state = {
 
 client.once(Events.ClientReady, async (ready) => {
   console.info(`Logged in as ${ready.user.tag} in ${client.guilds.cache.size} servers`);
-  ready.user.setPresence({ activities: [{ name: "server protection" }], status: "online" });
+  await applyStoredPresence(client, db);
   await registerSlashCommands(client);
 });
 

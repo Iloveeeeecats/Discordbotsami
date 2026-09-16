@@ -38,6 +38,17 @@ ALTER TABLE guild_settings ADD COLUMN IF NOT EXISTS color_channel_id TEXT;
 ALTER TABLE guild_settings ADD COLUMN IF NOT EXISTS ticket_panel JSONB;
 ALTER TABLE guild_settings ADD COLUMN IF NOT EXISTS color_panel JSONB;
 ALTER TABLE guild_settings ADD COLUMN IF NOT EXISTS rules_panel JSONB;
+CREATE TABLE IF NOT EXISTS bot_profile (
+  profile_id INTEGER PRIMARY KEY CHECK (profile_id = 1),
+  presence_status TEXT NOT NULL DEFAULT 'online',
+  activity_type TEXT NOT NULL DEFAULT 'playing',
+  activity_text TEXT,
+  activity_url TEXT,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+INSERT INTO bot_profile (profile_id, activity_text)
+VALUES (1, 'server protection')
+ON CONFLICT (profile_id) DO NOTHING;
 CREATE TABLE IF NOT EXISTS warnings (
   id BIGSERIAL PRIMARY KEY,
   guild_id TEXT NOT NULL,
@@ -178,6 +189,25 @@ export class Database {
        ON CONFLICT (guild_id) DO NOTHING`,
       [guildId, config.defaultPrefix],
     );
+  }
+
+  async getBotProfile() {
+    const { rows } = await this.query("SELECT * FROM bot_profile WHERE profile_id = 1");
+    return rows[0];
+  }
+
+  async updateBotProfile(fields) {
+    const allowed = new Set(["presence_status", "activity_type", "activity_text", "activity_url"]);
+    const entries = Object.entries(fields).filter(([key]) => allowed.has(key));
+    if (!entries.length) return this.getBotProfile();
+    const values = [];
+    const sets = entries.map(([key, value], index) => {
+      values.push(value);
+      return `${key} = $${index + 1}`;
+    });
+    sets.push("updated_at = NOW()");
+    await this.query(`UPDATE bot_profile SET ${sets.join(", ")} WHERE profile_id = 1`, values);
+    return this.getBotProfile();
   }
 
   async updateGuild(guildId, fields) {

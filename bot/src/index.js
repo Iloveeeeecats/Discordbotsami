@@ -139,7 +139,7 @@ client.on(Events.GuildMemberAdd, async (member) => {
 client.on(Events.InteractionCreate, async (interaction) => {
   try {
     if (interaction.isChatInputCommand()) await handleSlashInteraction(interaction, db);
-    else if (interaction.isButton()) await handlePanelButton(interaction, db);
+    else if (interaction.isButton() || interaction.isStringSelectMenu()) await handlePanelButton(interaction, db);
   } catch (err) {
     console.error("[interaction]", err);
     const reply = { embeds: [error("Something went wrong", "Discord rejected that interaction. Check the bot permissions and panel configuration.")], ephemeral: true };

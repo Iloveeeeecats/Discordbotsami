@@ -6,11 +6,19 @@ import {
   EmbedBuilder,
   PermissionFlagsBits,
   SlashCommandBuilder,
+  StringSelectMenuBuilder,
 } from "discord.js";
 import { error, info, success } from "./embeds.js";
 import { isBotOwner, isServerAdmin } from "./permissions.js";
 
 const adminPermissions = PermissionFlagsBits.Administrator.toString();
+const ticketButtonStyles = {
+  grey: ButtonStyle.Secondary,
+  gray: ButtonStyle.Secondary,
+  blue: ButtonStyle.Primary,
+  green: ButtonStyle.Success,
+  red: ButtonStyle.Danger,
+};
 
 const optionalText = (option, name, description, maxLength = 1000) =>
   option
@@ -38,6 +46,25 @@ const panelOptions = (command, includeCategory = false, requiredChannel = true) 
   return command;
 };
 
+const addTicketOptions = (subcommand, { includeRequiredReasons = false } = {}) => {
+  optionalText(subcommand, "reasons", "label|description|emoji;label|description|emoji", 2000);
+  subcommand.addStringOption((option) =>
+    option
+      .setName("button_color")
+      .setDescription("Button color")
+      .addChoices(
+        { name: "Grey", value: "grey" },
+        { name: "Blue", value: "blue" },
+        { name: "Green", value: "green" },
+        { name: "Red", value: "red" },
+      )
+      .setRequired(false),
+  );
+  optionalText(subcommand, "button_emoji", "Unicode emoji or server emoji such as <:cart:123456789>", 100);
+  optionalText(subcommand, "menu_placeholder", "Text shown before a ticket reason is selected", 150);
+  return subcommand;
+};
+
 const ticketCreate = new SlashCommandBuilder()
   .setName("ticketpanel")
   .setDescription("Create and edit an interactive ticket panel.")
@@ -55,6 +82,7 @@ const ticketCreate = new SlashCommandBuilder()
     optionalText(subcommand, "color", "Hex color such as #18181b", 7);
     optionalText(subcommand, "image", "Public image URL", 1000);
     optionalText(subcommand, "thumbnail", "Public thumbnail URL", 1000);
+    addTicketOptions(subcommand, { includeRequiredReasons: true });
     return subcommand;
   })
   .addSubcommand((subcommand) => {
@@ -70,6 +98,7 @@ const ticketCreate = new SlashCommandBuilder()
     optionalText(subcommand, "color", "Hex color such as #18181b", 7);
     optionalText(subcommand, "image", "Public image URL", 1000);
     optionalText(subcommand, "thumbnail", "Public thumbnail URL", 1000);
+    addTicketOptions(subcommand);
     return subcommand;
   });
 
@@ -180,6 +209,50 @@ const isValidUrl = (value) => {
   }
 };
 
+function buttonStyle(value, fallback = "grey") {
+  return ticketButtonStyles[String(value || fallback).toLowerCase()] || ticketButtonStyles[fallback];
+}
+
+function emojiValue(value) {
+  if (!value) return undefined;
+  const custom = /^<a?:([a-zA-Z0-9_]{2,32}):(\d+)>$/.exec(value.trim());
+  if (custom) return { id: custom[2], name: custom[1], animated: value.startsWith("<a:") };
+  return value.trim();
+}
+
+function applyEmoji(component, value) {
+  const emoji = emojiValue(value);
+  if (emoji) component.setEmoji(emoji);
+  return component;
+}
+
+function defaultTicketReasons() {
+  return [{ value: "support", label: "Support", description: "Open a support ticket", emoji: "" }];
+}
+
+function parseTicketReasons(value) {
+  if (!value?.trim()) return defaultTicketReasons();
+  const reasons = value
+    .split(";")
+    .map((entry, index) => {
+      const [label, description, emoji = ""] = entry.split("|").map((part) => part.trim());
+      if (!label) return null;
+      return {
+        value: `reason_${index + 1}`,
+        label: label.slice(0, 100),
+        description: (description || `Open a ${label} ticket`).slice(0, 100),
+        emoji: emoji.slice(0, 100),
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 25);
+  return reasons.length ? reasons : defaultTicketReasons();
+}
+
+function ticketReasonsForPanel(panel) {
+  return panel.reasons?.length ? panel.reasons : defaultTicketReasons();
+}
+
 const hexColor = (value, fallback = 0x18181b) => {
   if (!value) return fallback;
   return /^#[0-9a-f]{6}$/i.test(value) ? Number.parseInt(value.slice(1), 16) : fallback;
@@ -209,6 +282,9 @@ function getPanelValues(interaction, current = {}) {
     title: value("title") || "Community panel",
     description: value("description") || "Choose an option below.",
     button: value("button") || current.button || "Open",
+    buttonColor: option.getString("button_color") || current.buttonColor || "grey",
+    buttonEmoji: value("button_emoji") || current.buttonEmoji || "",
+    menuPlaceholder: value("menu_placeholder") || current.menuPlaceholder || "Choose a ticket reason",
     openingTitle: value("opening_title") || current.openingTitle || "Support ticket",
     openingDescription: value("opening_description") || current.openingDescription || "Please describe what you need help with.",
     openingImage: value("opening_image") || current.openingImage || "",
@@ -224,9 +300,12 @@ function panelMessage(panel, type) {
   const messageEmbed = embedFromPayload(panel);
   const rows = [];
   if (type === "ticket") {
-    rows.push(new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId("ticket:open").setLabel(panel.button || "Open ticket").setStyle(ButtonStyle.Secondary),
-    ));
+    const openButton = new ButtonBuilder()
+      .setCustomId("ticket:open")
+      .setLabel(panel.button || "Open ticket")
+      .setStyle(buttonStyle(panel.buttonColor));
+    applyEmoji(openButton, panel.buttonEmoji);
+    rows.push(new ActionRowBuilder().addComponents(openButton));
   } else if (type === "rules") {
     rows.push(new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId("rules:accept").setLabel(panel.button || "I agree").setStyle(ButtonStyle.Success),
@@ -238,6 +317,19 @@ function panelMessage(panel, type) {
     for (let index = 0; index < buttons.length; index += 5) rows.push(new ActionRowBuilder().addComponents(buttons.slice(index, index + 5)));
   }
   return { embeds: [messageEmbed], components: rows };
+}
+
+function ticketReasonMenu(panel) {
+  const menu = new StringSelectMenuBuilder()
+    .setCustomId("ticket:reason")
+    .setPlaceholder(panel.menuPlaceholder || "Choose a ticket reason")
+    .addOptions(ticketReasonsForPanel(panel).map((reason) => ({
+      label: reason.label,
+      value: reason.value,
+      description: reason.description,
+      ...(emojiValue(reason.emoji) ? { emoji: emojiValue(reason.emoji) } : {}),
+    })));
+  return new ActionRowBuilder().addComponents(menu);
 }
 
 function parseColorEntries(value) {
@@ -274,6 +366,8 @@ async function handleTicketPanel(interaction, db) {
   if (!(await requireAdmin(interaction))) return;
   const current = (await db.getGuild(interaction.guild.id)).ticket_panel || {};
   const panel = getPanelValues(interaction, current);
+  const reasons = interaction.options.getString("reasons");
+  panel.reasons = reasons ? parseTicketReasons(reasons) : ticketReasonsForPanel(current);
   const category = interaction.options.getChannel("category");
   if (category) panel.categoryId = category.id;
   await sendOrEditPanel(interaction, db, panel, "ticket", "ticket_panel", interaction.options.getSubcommand() === "edit" ? current : null);
@@ -366,34 +460,53 @@ export async function registerSlashCommands(client) {
   }
 }
 
+async function createTicketFromReason(interaction, settings, panel, reason) {
+  const existing = interaction.guild.channels.cache.find((channel) => channel.topic === `ticket-owner:${interaction.user.id}`);
+  if (existing) {
+    await interaction.reply({ content: `You already have a ticket: ${existing}`, ephemeral: true });
+    return;
+  }
+  const reasonSlug = reason.label.toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/gi, "-").replace(/^-|-$/g, "").slice(0, 24) || "ticket";
+  const channel = await interaction.guild.channels.create({
+    name: `${reasonSlug}-${interaction.user.username}`.slice(0, 90),
+    type: ChannelType.GuildText,
+    parent: panel.categoryId || settings.ticket_category_id || undefined,
+    topic: `ticket-owner:${interaction.user.id}`,
+    permissionOverwrites: [
+      { id: interaction.guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
+      { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
+      { id: interaction.guild.members.me.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels] },
+    ],
+  });
+  await channel.send({
+    embeds: [embedFromPayload({
+      title: panel.openingTitle || "Support ticket",
+      description: `${panel.openingDescription || "Please describe what you need help with."}\n\n**Reason:** ${reason.label}`,
+      color: panel.color,
+      image: panel.openingImage,
+      thumbnail: panel.openingThumbnail,
+    })],
+    components: [new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId("ticket:close").setLabel("Close ticket").setStyle(ButtonStyle.Danger),
+    )],
+  });
+  await interaction.reply({ content: `Ticket created: ${channel}`, ephemeral: true });
+}
+
 export async function handlePanelButton(interaction, db) {
-  if (interaction.customId === "ticket:open") {
+  if (interaction.isStringSelectMenu() && interaction.customId === "ticket:reason") {
+    const settings = await db.getGuild(interaction.guild.id);
+    const panel = settings.ticket_panel || {};
+    const reason = ticketReasonsForPanel(panel).find((entry) => entry.value === interaction.values[0]) || ticketReasonsForPanel(panel)[0];
+    await createTicketFromReason(interaction, settings, panel, reason);
+    return;
+  }
+  if (interaction.customId === "ticket:open" || interaction.customId === "ticket:create") {
     const settings = await db.getGuild(interaction.guild.id);
     const panel = settings.ticket_panel || {};
     const existing = interaction.guild.channels.cache.find((channel) => channel.topic === `ticket-owner:${interaction.user.id}`);
     if (existing) return interaction.reply({ content: `You already have a ticket: ${existing}`, ephemeral: true });
-    const channel = await interaction.guild.channels.create({
-      name: `ticket-${interaction.user.username}`.slice(0, 90),
-      type: ChannelType.GuildText,
-      parent: panel.categoryId || settings.ticket_category_id || undefined,
-      topic: `ticket-owner:${interaction.user.id}`,
-      permissionOverwrites: [
-        { id: interaction.guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
-        { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
-        { id: interaction.guild.members.me.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels] },
-      ],
-    });
-    await channel.send({
-      embeds: [embedFromPayload({
-        title: panel.openingTitle || "Support ticket",
-        description: panel.openingDescription || "Please describe what you need help with.",
-        color: panel.color,
-        image: panel.openingImage,
-        thumbnail: panel.openingThumbnail,
-      })],
-      components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("ticket:close").setLabel("Close ticket").setStyle(ButtonStyle.Danger))],
-    });
-    await interaction.reply({ content: `Ticket created: ${channel}`, ephemeral: true });
+    await interaction.reply({ content: "Choose a reason for opening your ticket:", components: [ticketReasonMenu(panel)], ephemeral: true });
     return;
   }
   if (interaction.customId === "ticket:close") {

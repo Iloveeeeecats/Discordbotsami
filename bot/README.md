@@ -103,6 +103,20 @@ Slash commands are registered per server when the bot starts and again when it j
 
 Panel messages store their configuration in PostgreSQL. Ticket opening text, panel copy, button labels, target channels, categories, color definitions, images, thumbnails, and rules acknowledgement roles can be edited without recreating the bot.
 
+Ticket panels open a reason picker after the user clicks the main button. Configure reasons with:
+
+```text
+label|description|emoji;label|description|emoji
+```
+
+For example:
+
+```text
+شراء|فتح تذكرة لغرض الشراء|🛒;استفسار|فتح تذكرة للاستفسار|❓
+```
+
+Ticket buttons support grey, blue, green, and red Discord styles. `button_emoji` accepts Unicode emoji or a server emoji mention such as `<:cart:123456789>`. The same emoji format can be used for each reason.
+
 ## Hosting
 
 Set the three required environment variables in the hosting panel, choose Node.js, run `npm install`, and use `npm start` as the startup command. No browser login, Replit-specific service, fixed port, local file database, or uptime ping is required.

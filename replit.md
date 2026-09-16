@@ -60,6 +60,7 @@ _Populate as you build — sharp edges, "always run X before Y" rules._
 - Prefixes are loaded per guild before command parsing, so commands, aliases, help, and mention responses always reflect the current server prefix.
 - Unsupported server-profile endpoints are reported explicitly; global bot profile mutations are never used as a substitute.
 - Global profile mutations and current-member server profile mutations use separate commands and Discord endpoints.
+- Ticket panels use a configurable reason select menu, Discord button styles, Unicode/server emojis, and persistent opening-message settings.
 - Owner-only access is based only on `BOT_OWNER_IDS`; Discord Administrator is intentionally separate.
 
 ## Product
